@@ -5,12 +5,17 @@ from imutils.contours import sort_contours
 
 from skimage.morphology import skeletonize as skl
 from scipy.ndimage import binary_fill_holes as fill
+from skimage.morphology import medial_axis as ma
 from scipy.ndimage import label
 
 
 path = 'endpoints_detection/muestra.png'
+path2 = 'muestra.png'
 
-img = cv2.imread(path, 0)
+try:
+    img = cv2.imread(path2, 0)
+except:
+    img = cv2.imread(path, 0)
 
 # Some smoothing to get rid of the noise
 # img = cv2.bilateralFilter(img, 5, 35, 10)
@@ -32,27 +37,16 @@ kernel = np.array([[0, 1, 1],
                   [0, 1, 0],
                   [1, 1, 0]], dtype='uint8')
 
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+n = 8
+for i in range(n):
+    th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+n = 6
+for i in range(n):
+    th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
 th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
-th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+n = 7
+for i in range(n):
+    th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
 
 cv2.imshow('mask', th)
 cv2.waitKey(0)
@@ -71,6 +65,25 @@ mask_sizes[0] = 0
 th = mask_sizes[regions]
 th = np.uint8( th*255 )
 
+n = 10
+for i in range(n):
+    th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+n = 10
+for i in range(n):
+    th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+n = 10
+for i in range(n):
+    th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+
+th = fill(th )
+th = np.uint8( th*255 )
+
+''' Medial axis 
+    https://scikit-image.org/docs/stable/auto_examples/edges/plot_skeleton.html '''
+# th, distance = ma(th, return_distance=True)
+# th = np.uint8( th*255 )
+
 cv2.imshow('mask', th)
 cv2.waitKey(0)
 
@@ -85,8 +98,9 @@ cv2.waitKey(0)
 # Skimage function takes image with either True, False or 0,1
 # and returns and image with values 0, 1.
 th = th == 255
-th = skl(th)
-th = th.astype(np.uint8)*255
+# th = skl(th)
+# th = th.astype(np.uint8)*255 # default method='zhang'
+th = skl(th, method='lee')
 
 cv2.imshow('mask', th)
 cv2.waitKey(0)
