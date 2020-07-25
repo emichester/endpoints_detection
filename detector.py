@@ -10,8 +10,8 @@ from skimage.morphology import medial_axis as ma
 from scipy.ndimage import label
 
 
-path = 'endpoints_detection/muestra.png'
-path2 = 'muestra.png'
+path = 'endpoints_detection/sample.png'
+path2 = 'sample.png'
 
 try:
     img = cv2.imread(path2, 0)
