@@ -3,7 +3,8 @@ import cv2
 from imutils import resize
 from imutils.contours import sort_contours
 
-from skimage.morphology import skeletonize as skl
+from skimage.morphology import skeletonize_3d as skl
+# from skimage.morphology import skeletonize as skl
 from scipy.ndimage import binary_fill_holes as fill
 from skimage.morphology import medial_axis as ma
 from scipy.ndimage import label
@@ -37,6 +38,7 @@ kernel = np.array([[0, 1, 1],
                   [0, 1, 0],
                   [1, 1, 0]], dtype='uint8')
 
+''' Morphological transforms '''
 n = 8
 for i in range(n):
     th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
@@ -51,7 +53,8 @@ for i in range(n):
 cv2.imshow('mask', th)
 cv2.waitKey(0)
 
-''' from https://scikit-image.org/docs/stable/user_guide/tutorial_segmentation.html '''
+''' Area thresholding
+    from https://scikit-image.org/docs/stable/user_guide/tutorial_segmentation.html '''
 th = fill(th )
 th = np.uint8( th*255 )
 
@@ -65,14 +68,15 @@ mask_sizes[0] = 0
 th = mask_sizes[regions]
 th = np.uint8( th*255 )
 
-n = 10
+''' Morphological transforms '''
+n = 30
 for i in range(n):
     th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
 n = 10
 for i in range(n):
     th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
 th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-n = 10
+n = 80
 for i in range(n):
     th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
 
@@ -98,9 +102,9 @@ cv2.waitKey(0)
 # Skimage function takes image with either True, False or 0,1
 # and returns and image with values 0, 1.
 th = th == 255
-# th = skl(th)
+th = skl(th)
 # th = th.astype(np.uint8)*255 # default method='zhang'
-th = skl(th, method='lee')
+# th = skl(th, method='lee')
 
 cv2.imshow('mask', th)
 cv2.waitKey(0)
