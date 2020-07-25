@@ -1,4 +1,4 @@
-# handwritten-character-skeleton
+# endpoints_detection
 Python program utilizing OpenCV to find the skeleton of handwritten characters and their endpoints
 
 The program finds the characters in the supplied image and shows the skeleton and endpoints of each character.

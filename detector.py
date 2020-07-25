@@ -4,9 +4,14 @@ from imutils import resize
 from imutils.contours import sort_contours
 
 from skimage.morphology import skeletonize as skl
+from scipy.ndimage import binary_fill_holes as fill
+from scipy.ndimage import label
 
-path = 'chars2.jpeg'
+
+path = 'endpoints_detection/muestra.png'
+
 img = cv2.imread(path, 0)
+
 # Some smoothing to get rid of the noise
 # img = cv2.bilateralFilter(img, 5, 35, 10)
 img = cv2.GaussianBlur(img, (3, 3), 3)
@@ -18,13 +23,53 @@ th = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
 # Invert to hightligth the shape
 th = cv2.bitwise_not(th)
 
+cv2.imshow('mask', th)
+cv2.waitKey(0)
+
 # Text has mostly vertical and right-inclined lines. This kernel seems to
 # work quite well
 kernel = np.array([[0, 1, 1],
                   [0, 1, 0],
                   [1, 1, 0]], dtype='uint8')
 
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
 th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
+
+cv2.imshow('mask', th)
+cv2.waitKey(0)
+
+''' from https://scikit-image.org/docs/stable/user_guide/tutorial_segmentation.html '''
+th = fill(th )
+th = np.uint8( th*255 )
+
+cv2.imshow('mask', th)
+cv2.waitKey(0)
+
+regions, labels = label( th )
+sizes = np.bincount(regions.ravel())
+mask_sizes = sizes > 1500
+mask_sizes[0] = 0
+th = mask_sizes[regions]
+th = np.uint8( th*255 )
 
 cv2.imshow('mask', th)
 cv2.waitKey(0)
@@ -42,6 +87,9 @@ cv2.waitKey(0)
 th = th == 255
 th = skl(th)
 th = th.astype(np.uint8)*255
+
+cv2.imshow('mask', th)
+cv2.waitKey(0)
 
 # Find contours of the skeletons
 _, contours, _ = cv2.findContours(th.copy(), cv2.RETR_EXTERNAL,
@@ -84,7 +132,8 @@ skeletons = []
 
 
 for contour in contours:
-    if cv2.arcLength(contour, True) > 100:
+    # if cv2.arcLength(contour, True) > 100:
+    if cv2.arcLength(contour, True) > 1:
         # Initialize mask
         mask = np.zeros(img.shape, np.uint8)
         # Bounding rect of the contour
@@ -103,8 +152,8 @@ for contour in contours:
 
         # Draw the endpoints
         [cv2.circle(th, ep, 5, 255, 1) for ep in eps]
-        cv2.imshow('mask', mask)
-        cv2.waitKey(500)
+        # cv2.imshow('mask', mask)
+        # cv2.waitKey(500)
 
 # Stack the original and modified
 th = resize(np.hstack((img, th)), 1200)
