@@ -7,11 +7,13 @@ from skimage.morphology import skeletonize_3d as skl
 # from skimage.morphology import skeletonize as skl
 from scipy.ndimage import binary_fill_holes as fill
 from skimage.morphology import medial_axis as ma
-from scipy.ndimage import label
+from scipy.ndimage import label,convolve
+from skimage.measure import label as label2
+from skimage.measure import regionprops
 
-
-path = 'endpoints_detection/sample.png'
-path2 = 'sample.png'
+# path = 'endpoints_detection/sample.png'
+# path2 = 'sample.png'
+path2 = 'sample2.png'
 
 try:
     img = cv2.imread(path2, 0)
@@ -39,14 +41,14 @@ kernel = np.array([[0, 1, 1],
                   [1, 1, 0]], dtype='uint8')
 
 ''' Morphological transforms '''
-n = 8
+n = 15
 for i in range(n):
     th = cv2.morphologyEx(th, cv2.MORPH_DILATE, kernel)
-n = 6
+n = 10
 for i in range(n):
     th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
 th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
-n = 7
+n = 10
 for i in range(n):
     th = cv2.morphologyEx(th, cv2.MORPH_ERODE, kernel)
 
@@ -85,7 +87,7 @@ th = np.uint8( th*255 )
 
 ''' Medial axis 
     https://scikit-image.org/docs/stable/auto_examples/edges/plot_skeleton.html '''
-# th, distance = ma(th, return_distance=True)
+# _, distance = ma(th, return_distance=True)
 # th = np.uint8( th*255 )
 
 cv2.imshow('mask', th)
@@ -106,10 +108,63 @@ th = skl(th)
 # th = th.astype(np.uint8)*255 # default method='zhang'
 # th = skl(th, method='lee')
 
+''' Eliminating spureus branches
+    https://xbuba.com/questions/50341793 '''
+def _neighbors_conv(image):
+    image = image.astype(np.uint8)
+    k = np.array([[1,1,1],[1,0,1],[1,1,1]])
+    neighborhood_count = convolve(image,k, mode='constant', cval=1)
+    neighborhood_count[~image.astype(np.bool)] = 0
+    return neighborhood_count
+
+def break_branches(image):
+    tmp = _neighbors_conv(image)
+    tmp[tmp==0] = 100
+    tmp = tmp < 3
+    return tmp
+
+th = break_branches(th/255).astype(np.uint8)*255
+
 cv2.imshow('mask', th)
 cv2.waitKey(0)
 
-# Find contours of the skeletons
+''' Get skel approx centroid '''
+(row,col) = np.nonzero(th)
+ctr_approx = ( np.mean( row ) , np.mean( col ) )
+
+''' Get skel centroid '''
+dist = 1e10
+for (r,c) in zip(row,col):
+    tmp = ( (r-ctr_approx[0])**2 + (c-ctr_approx[1])**2 )**0.5
+    if tmp <= dist:
+        dist = tmp
+        ctr = (r,c)
+
+print(ctr)
+
+# cv2.destroyAllWindows()
+
+''' Region propperties
+    https://stackoverflow.com/questions/42161884/python-how-to-find-all-connected-pixels-if-i-know-an-origin-pixels-position '''
+labeled = label2( th, background=False, connectivity=2 )
+print(labeled[ctr[0],ctr[1]])
+print(labeled.shape)
+label = labeled[ctr[0],ctr[1]]
+rp = regionprops(labeled)
+props = rp[label - 1] # background is labeled 0, not in rp
+# props.bbox # (min_row, min_col, max_row, max_col)
+# props.image # array matching the bbox sub-image
+# props.coordinates # list of (row,col) pixel indices
+
+b = props.bbox
+th[:,:] = 0
+th[ b[0]:b[2] , b[1]:b[3] ] = props.image
+th = th.astype( np.uint8 )*255
+
+cv2.imshow('mask', th )
+cv2.waitKey(0)
+
+''' Find contours of the skeletons '''
 _, contours, _ = cv2.findContours(th.copy(), cv2.RETR_EXTERNAL,
                                   cv2.CHAIN_APPROX_NONE)
 # Sort the contours left-to-rigth
