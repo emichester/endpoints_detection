@@ -4,26 +4,30 @@ from imutils import resize
 from imutils.contours import sort_contours
 
 from skimage.morphology import skeletonize_3d as skl
-# from skimage.morphology import skeletonize as skl
 from scipy.ndimage import binary_fill_holes as fill
 from skimage.morphology import medial_axis as ma
-from scipy.ndimage import label,convolve
-from skimage.measure import label as label2
-from skimage.measure import regionprops
+from scipy.ndimage import convolve
+from skimage.measure import label, regionprops
 
 # path = 'endpoints_detection/sample.png'
-# path2 = 'sample.png'
-path2 = 'sample2.png'
+path2 = 'sample.png'
+# path2 = 'sample2.png'
 
 try:
     img = cv2.imread(path2, 0)
 except:
     img = cv2.imread(path, 0)
 
+orig = img
+
+hini, wini = img.shape
+
 # Some smoothing to get rid of the noise
 # img = cv2.bilateralFilter(img, 5, 35, 10)
 img = cv2.GaussianBlur(img, (3, 3), 3)
 img = resize(img, width=700)
+
+hfin, wfin = img.shape
 
 # Preprocessing to get the shapes
 th = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -63,7 +67,7 @@ th = np.uint8( th*255 )
 cv2.imshow('mask', th)
 cv2.waitKey(0)
 
-regions, labels = label( th )
+regions = label( th )
 sizes = np.bincount(regions.ravel())
 mask_sizes = sizes > 1500
 mask_sizes[0] = 0
@@ -140,21 +144,17 @@ for (r,c) in zip(row,col):
         dist = tmp
         ctr = (r,c)
 
-print(ctr)
-
-# cv2.destroyAllWindows()
-
 ''' Region propperties
-    https://stackoverflow.com/questions/42161884/python-how-to-find-all-connected-pixels-if-i-know-an-origin-pixels-position '''
-labeled = label2( th, background=False, connectivity=2 )
-print(labeled[ctr[0],ctr[1]])
-print(labeled.shape)
+    https://stackoverflow.com/questions/42161884/python-how-to-find-all-connected-pixels-if-i-know-an-origin-pixels-position
+    https://scikit-image.org/docs/dev/api/skimage.measure.html#regionprops
+
+    # props.bbox # (min_row, min_col, max_row, max_col)
+    # props.image # array matching the bbox sub-image
+    # props.coordinates # list of (row,col) pixel indices'''
+labeled = label( th, background=False, connectivity=2 )
 label = labeled[ctr[0],ctr[1]]
 rp = regionprops(labeled)
 props = rp[label - 1] # background is labeled 0, not in rp
-# props.bbox # (min_row, min_col, max_row, max_col)
-# props.image # array matching the bbox sub-image
-# props.coordinates # list of (row,col) pixel indices
 
 b = props.bbox
 th[:,:] = 0
@@ -229,7 +229,8 @@ for contour in contours:
         # cv2.waitKey(500)
 
 # Stack the original and modified
-th = resize(np.hstack((img, th)), 1200)
+# th = resize(np.hstack((img, th)), 1200)
+th = np.hstack((img, th))
 
 
 #    cv2.waitKey(50)
@@ -237,6 +238,21 @@ th = resize(np.hstack((img, th)), 1200)
 # TODO
 # Walk the points using the endpoints by minimizing the walked distance
 # Points in between can be used many times, endpoints only once
+cv2.namedWindow('mask', cv2.WINDOW_NORMAL)
+cv2.resizeWindow('mask', 800, 800)
 cv2.imshow('mask', th)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+def equivalence( wini, hini, wfin, hfin, xo, yo ):
+    y = int(hini*yo/hfin)
+    x = int(wini*xo/wfin)
+    return x, y
+
+actualendpoints = []
+
+print( 'Resized endpoints %s'%endpoints )
+for ep in endpoints[0]:
+    actualendpoints.append( equivalence(wini,hini,wfin,hfin,  ep[0] , ep[1] ) )
+
+print( 'Actual endpoints %s'%actualendpoints )
